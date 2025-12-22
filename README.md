@@ -34,7 +34,7 @@ allprojects {
 ```
 In your application build file:
 ``` gradle
-implementation 'com.github.msinghal34:pattern-lock:0.5.0'
+implementation 'com.github.msinghal34:pattern-lock:0.6.0'
 ```
 
 ### XML
@@ -133,7 +133,7 @@ plv_spacing | dimension | 24dp |
 plv_rowCount | integer | 3 |
 plv_columnCount | integer | 3 |
 plv_errorDuration | integer | 400 | millisecond
-plv_hitAreaPaddingRatio | float | 0.2 |
+plv_hitAreaPaddingRatio | float | 0.4 |
 plv_indicatorSizeRatio | float | 0.2 |
 plv_vibrate | boolean | true
 
@@ -145,7 +145,24 @@ You can turn the secure mode on or off via call ```enableSecureMode()``` and ```
 
 You can also turn the vibration on or off via call ```enableVibration()``` and ```disableVibration()```.
 
+## Testing Changes in Library Locally
+To test changes in the library locally before publishing, you can include the local version in your app project.
+1. In settings.gradle file of your app project, add mavenLocal() source in your repositories list.
+2. Commands to build library locally
+
+``` bash
+   ./gradlew clean
+   ./gradlew build
+   ./gradlew publishReleasePublicationToMavenLocal
+```
+
 ## Change Log
+
+### 0.6.0 (2025-12-22)
+* Fixes an issue with pattern resetting later due to pending callback from onError
+* Fixes is cell selected logic to use circle instead of square
+* Increases DEFAULT_HIT_AREA_PADDING_RATIO to 0.4 to easily allow sharp diagonals
+* Updates targetSDK, gradle, and dependencies
 
 ### 0.5.0 (2024-11-08)
 * Adds programmatic support to change line style to invisible

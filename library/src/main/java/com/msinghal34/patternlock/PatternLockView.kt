@@ -13,6 +13,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.widget.GridLayout
 import androidx.core.content.ContextCompat
+import androidx.core.content.withStyledAttributes
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.sqrt
@@ -26,7 +27,7 @@ class PatternLockView : GridLayout {
         const val DEFAULT_ROW_COUNT = 3
         const val DEFAULT_COLUMN_COUNT = 3
         const val DEFAULT_ERROR_DURATION = 400 // unit: ms
-        const val DEFAULT_HIT_AREA_PADDING_RATIO = 0.2f
+        const val DEFAULT_HIT_AREA_PADDING_RATIO = 0.4f
         const val DEFAULT_INDICATOR_SIZE_RATIO = 0.2f
 
         const val LINE_STYLE_COMMON = 1
@@ -80,83 +81,66 @@ class PatternLockView : GridLayout {
     private var isSecureMode = false
 
     private var onPatternListener: OnPatternListener? = null
+    private var pendingResetRunnable: Runnable? = null
 
     constructor(context: Context) : super(context)
 
     constructor(context: Context, attributeSet: AttributeSet) : super(context, attributeSet) {
-        val ta = context.obtainStyledAttributes(attributeSet, R.styleable.PatternLockView)
-        regularCellBackground =
-            ta.getDrawable(R.styleable.PatternLockView_plv_regularCellBackground)
-        regularDotColor = ta.getColor(
-            R.styleable.PatternLockView_plv_regularDotColor,
-            ContextCompat.getColor(context, R.color.regularColor)
-        )
-        regularDotRadiusRatio =
-            ta.getFloat(R.styleable.PatternLockView_plv_regularDotRadiusRatio, DEFAULT_RADIUS_RATIO)
+        context.withStyledAttributes(attributeSet, R.styleable.PatternLockView) {
+            regularCellBackground = getDrawable(R.styleable.PatternLockView_plv_regularCellBackground)
+            regularDotColor = getColor(
+                R.styleable.PatternLockView_plv_regularDotColor, ContextCompat.getColor(context, R.color.regularColor)
+            )
+            regularDotRadiusRatio = getFloat(
+                R.styleable.PatternLockView_plv_regularDotRadiusRatio, DEFAULT_RADIUS_RATIO
+            )
 
-        selectedCellBackground =
-            ta.getDrawable(R.styleable.PatternLockView_plv_selectedCellBackground)
-        selectedDotColor = ta.getColor(
-            R.styleable.PatternLockView_plv_selectedDotColor,
-            ContextCompat.getColor(context, R.color.selectedColor)
-        )
-        selectedDotRadiusRatio = ta.getFloat(
-            R.styleable.PatternLockView_plv_selectedDotRadiusRatio,
-            DEFAULT_RADIUS_RATIO
-        )
+            selectedCellBackground = getDrawable(R.styleable.PatternLockView_plv_selectedCellBackground)
+            selectedDotColor = getColor(
+                R.styleable.PatternLockView_plv_selectedDotColor, ContextCompat.getColor(context, R.color.selectedColor)
+            )
+            selectedDotRadiusRatio = getFloat(
+                R.styleable.PatternLockView_plv_selectedDotRadiusRatio, DEFAULT_RADIUS_RATIO
+            )
 
-        errorCellBackground = ta.getDrawable(R.styleable.PatternLockView_plv_errorCellBackground)
-        errorDotColor = ta.getColor(
-            R.styleable.PatternLockView_plv_errorDotColor,
-            ContextCompat.getColor(context, R.color.errorColor)
-        )
-        errorDotRadiusRatio =
-            ta.getFloat(R.styleable.PatternLockView_plv_errorDotRadiusRatio, DEFAULT_RADIUS_RATIO)
+            errorCellBackground = getDrawable(R.styleable.PatternLockView_plv_errorCellBackground)
+            errorDotColor = getColor(
+                R.styleable.PatternLockView_plv_errorDotColor, ContextCompat.getColor(context, R.color.errorColor)
+            )
+            errorDotRadiusRatio = getFloat(R.styleable.PatternLockView_plv_errorDotRadiusRatio, DEFAULT_RADIUS_RATIO)
 
-        lineStyle = ta.getInt(R.styleable.PatternLockView_plv_lineStyle, 1)
-        lineWidth = ta.getDimensionPixelSize(
-            R.styleable.PatternLockView_plv_lineWidth,
-            TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP,
-                DEFAULT_LINE_WIDTH,
-                context.resources.displayMetrics
-            ).toInt()
-        )
-        regularLineColor = ta.getColor(
-            R.styleable.PatternLockView_plv_regularLineColor,
-            ContextCompat.getColor(context, R.color.selectedColor)
-        )
-        errorLineColor = ta.getColor(
-            R.styleable.PatternLockView_plv_errorLineColor,
-            ContextCompat.getColor(context, R.color.errorColor)
-        )
+            lineStyle = getInt(R.styleable.PatternLockView_plv_lineStyle, 1)
+            lineWidth = getDimensionPixelSize(
+                R.styleable.PatternLockView_plv_lineWidth, TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_DIP, DEFAULT_LINE_WIDTH, context.resources.displayMetrics
+                ).toInt()
+            )
+            regularLineColor = getColor(
+                R.styleable.PatternLockView_plv_regularLineColor, ContextCompat.getColor(context, R.color.selectedColor)
+            )
+            errorLineColor = getColor(
+                R.styleable.PatternLockView_plv_errorLineColor, ContextCompat.getColor(context, R.color.errorColor)
+            )
 
-        spacing = ta.getDimensionPixelSize(
-            R.styleable.PatternLockView_plv_spacing,
-            TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP,
-                DEFAULT_SPACING,
-                context.resources.displayMetrics
-            ).toInt()
-        )
+            spacing = getDimensionPixelSize(
+                R.styleable.PatternLockView_plv_spacing, TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_DIP, DEFAULT_SPACING, context.resources.displayMetrics
+                ).toInt()
+            )
 
-        plvRowCount = ta.getInteger(R.styleable.PatternLockView_plv_rowCount, DEFAULT_ROW_COUNT)
-        plvColumnCount =
-            ta.getInteger(R.styleable.PatternLockView_plv_columnCount, DEFAULT_COLUMN_COUNT)
+            plvRowCount = getInteger(R.styleable.PatternLockView_plv_rowCount, DEFAULT_ROW_COUNT)
+            plvColumnCount = getInteger(R.styleable.PatternLockView_plv_columnCount, DEFAULT_COLUMN_COUNT)
 
-        errorDuration =
-            ta.getInteger(R.styleable.PatternLockView_plv_errorDuration, DEFAULT_ERROR_DURATION)
-        hitAreaPaddingRatio = ta.getFloat(
-            R.styleable.PatternLockView_plv_hitAreaPaddingRatio,
-            DEFAULT_HIT_AREA_PADDING_RATIO
-        )
-        indicatorSizeRatio = ta.getFloat(
-            R.styleable.PatternLockView_plv_indicatorSizeRatio,
-            DEFAULT_INDICATOR_SIZE_RATIO
-        )
-        vibrate = ta.getBoolean(R.styleable.PatternLockView_plv_vibrate, true)
+            errorDuration = getInteger(R.styleable.PatternLockView_plv_errorDuration, DEFAULT_ERROR_DURATION)
+            hitAreaPaddingRatio = getFloat(
+                R.styleable.PatternLockView_plv_hitAreaPaddingRatio, DEFAULT_HIT_AREA_PADDING_RATIO
+            )
+            indicatorSizeRatio = getFloat(
+                R.styleable.PatternLockView_plv_indicatorSizeRatio, DEFAULT_INDICATOR_SIZE_RATIO
+            )
+            vibrate = getBoolean(R.styleable.PatternLockView_plv_vibrate, true)
 
-        ta.recycle()
+        }
 
         rowCount = plvRowCount
         columnCount = plvColumnCount
@@ -168,7 +152,12 @@ class PatternLockView : GridLayout {
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         when (event?.action) {
             MotionEvent.ACTION_DOWN -> {
+                // Cancel any scheduled reset from previous error
+                pendingResetRunnable?.let { removeCallbacks(it) }
+                pendingResetRunnable = null
+
                 reset()
+
                 val hitCell = getHitCell(event.x.toInt(), event.y.toInt())
                 if (hitCell == null) {
                     return false
@@ -182,7 +171,11 @@ class PatternLockView : GridLayout {
 
             MotionEvent.ACTION_UP -> onFinish()
 
-            MotionEvent.ACTION_CANCEL -> reset()
+            MotionEvent.ACTION_CANCEL -> {
+                pendingResetRunnable?.let { removeCallbacks(it) }
+                pendingResetRunnable = null
+                reset()
+            }
 
             else -> return false
         }
@@ -195,7 +188,7 @@ class PatternLockView : GridLayout {
         if ((hitCell != null) && (!selectedCells.contains(hitCell))) {
             // Notify selection of any previously unselected cells which lie on this line.
             // Corresponding logic is only applicable for a simple case when both number of rows and columns are 3.
-            if ((selectedCells.size > 0) && (plvRowCount == 3) && (plvColumnCount == 3)) {
+            if ((selectedCells.isNotEmpty()) && (plvRowCount == 3) && (plvColumnCount == 3)) {
                 val lastCell = selectedCells.last()
                 val potentialIndex = (lastCell.index + hitCell.index) / 2
                 if (!selectedCells.contains(cells[potentialIndex]) && (abs(lastCell.index / 3 - hitCell.index / 3) % 2 == 0) && (abs(
@@ -242,8 +235,7 @@ class PatternLockView : GridLayout {
                     (previousCellCenter.y + radius * diffY / length).toFloat()
                 )
                 linePath.lineTo(
-                    (center.x - radius * diffX / length).toFloat(),
-                    (center.y - radius * diffY / length).toFloat()
+                    (center.x - radius * diffX / length).toFloat(), (center.y - radius * diffY / length).toFloat()
                 )
 
                 val degree = Math.toDegrees(atan2(diffY.toDouble(), diffX.toDouble())) + 90
@@ -257,7 +249,7 @@ class PatternLockView : GridLayout {
         super.dispatchDraw(canvas)
         if (isSecureMode) return
         canvas.drawPath(linePath, linePaint)
-        if (selectedCells.size > 0 && lastX > 0 && lastY > 0) {
+        if (selectedCells.isNotEmpty() && lastX > 0 && lastY > 0) {
             if (lineStyle == LINE_STYLE_COMMON) {
                 val center = selectedCells[selectedCells.size - 1].getCenter()
                 canvas.drawLine(center.x.toFloat(), center.y.toFloat(), lastX, lastY, linePaint)
@@ -266,18 +258,16 @@ class PatternLockView : GridLayout {
                 val lastCellCenter = lastCell.getCenter()
                 val radius = lastCell.getRadius()
 
-                if (!(lastX >= lastCellCenter.x - radius &&
-                            lastX <= lastCellCenter.x + radius &&
-                            lastY >= lastCellCenter.y - radius &&
-                            lastY <= lastCellCenter.y + radius)
-                ) {
+                if (!(lastX >= lastCellCenter.x - radius && lastX <= lastCellCenter.x + radius && lastY >= lastCellCenter.y - radius && lastY <= lastCellCenter.y + radius)) {
                     val diffX = lastX - lastCellCenter.x
                     val diffY = lastY - lastCellCenter.y
                     val length = sqrt((diffX * diffX + diffY * diffY).toDouble())
                     canvas.drawLine(
                         (lastCellCenter.x + radius * diffX / length).toFloat(),
                         (lastCellCenter.y + radius * diffY / length).toFloat(),
-                        lastX, lastY, linePaint
+                        lastX,
+                        lastY,
+                        linePaint
                     )
                 }
             }
@@ -285,14 +275,25 @@ class PatternLockView : GridLayout {
     }
 
     private fun setupCells() {
-        for (i in 0..(plvRowCount - 1)) {
-            for (j in 0..(plvColumnCount - 1)) {
+        for (i in 0..<plvRowCount) {
+            for (j in 0..<plvColumnCount) {
                 val cell = Cell(
-                    context, i * plvColumnCount + j,
-                    regularCellBackground, regularDotColor, regularDotRadiusRatio,
-                    selectedCellBackground, selectedDotColor, selectedDotRadiusRatio,
-                    errorCellBackground, errorDotColor, errorDotRadiusRatio,
-                    lineStyle, regularLineColor, errorLineColor, plvColumnCount, indicatorSizeRatio
+                    context,
+                    i * plvColumnCount + j,
+                    regularCellBackground,
+                    regularDotColor,
+                    regularDotRadiusRatio,
+                    selectedCellBackground,
+                    selectedDotColor,
+                    selectedDotRadiusRatio,
+                    errorCellBackground,
+                    errorDotColor,
+                    errorDotRadiusRatio,
+                    lineStyle,
+                    regularLineColor,
+                    errorLineColor,
+                    plvColumnCount,
+                    indicatorSizeRatio
                 )
                 val cellPadding = spacing / 2
                 cell.setPadding(cellPadding, cellPadding, cellPadding, cellPadding)
@@ -358,11 +359,21 @@ class PatternLockView : GridLayout {
     }
 
     private fun isSelected(view: View, x: Int, y: Int): Boolean {
-        var innerPadding = view.width * hitAreaPaddingRatio
-        return x >= view.left + innerPadding &&
-                x <= view.right - innerPadding &&
-                y >= view.top + innerPadding &&
-                y <= view.bottom - innerPadding
+        // Center of the cell
+        val centerX = (view.left + view.right) / 2f
+        val centerY = (view.top + view.bottom) / 2f
+
+        // Base radius is half of the smaller side
+        val baseRadius = (minOf(view.width, view.height) / 2f)
+
+        // Shrink radius by hitAreaPaddingRatio
+        val radius = baseRadius * (1f - hitAreaPaddingRatio)
+
+        val dx = x - centerX
+        val dy = y - centerY
+        val distanceSq = dx * dx + dy * dy
+
+        return distanceSq <= radius * radius
     }
 
     private fun onFinish() {
@@ -379,7 +390,7 @@ class PatternLockView : GridLayout {
     }
 
     private fun generateSelectedIds(): ArrayList<Int> {
-        var result = ArrayList<Int>()
+        val result = ArrayList<Int>()
         for (cell in selectedCells) {
             result.add(cell.index)
         }
@@ -391,16 +402,20 @@ class PatternLockView : GridLayout {
             reset()
             return
         }
+
         for (cell in selectedCells) {
             cell.setState(State.ERROR)
         }
         linePaint.color = errorLineColor
         invalidate()
 
-        postDelayed({
+        pendingResetRunnable?.let { removeCallbacks(it) }
+        val r = Runnable {
             reset()
-        }, errorDuration.toLong())
-
+            pendingResetRunnable = null
+        }
+        pendingResetRunnable = r
+        postDelayed(r, errorDuration.toLong())
     }
 
     private fun maybeVibrate(keyCode: Int) {
